@@ -50,15 +50,22 @@ passenger_locations = [
     (-3, -2),
     (4, 3),
     (2, -2),
+    (2.1, -2.5),
+    (1.6, -1.8),
+    (1.9, -2.3),
     (4, -1),
+    # (4.1, -1.3),
+    # (3.8, -0.9),
+    # (4.3, -1.4),
 ]
 
+
 def total_distance(x0, y0):
-    # print('evaluating at', x0, y0)
     return sum(
-        (x - x0) ** 2 + (y - y0) ** 2
+        np.sqrt((x - x0) ** 2 + (y - y0) ** 2)
         for x, y in passenger_locations
     )
+
 
 class MovingPointScene(Scene):
     CONFIG = {
@@ -389,10 +396,13 @@ class ParabolaExample(GraphScene):
             Write(f_label),
         )
         self.wait()
-        self.play(ShowCreation(vertical_line))
-        self.play(ShowCreation(horizontal_line))
-        self.wait()
-        self.play(ShowCreation(secant_group))
+        self.play(
+            ShowCreation(vertical_line),
+        )
+        self.play(
+            ShowCreation(horizontal_line),
+            ShowCreation(secant_group),
+        )
         self.wait()
         self.play(
             ApplyMethod(
@@ -422,7 +432,7 @@ class ParabolaExample(GraphScene):
             Transform(
                 secant_group,
                 self.get_secant_slope_group(vt.get_value(), g, dx=0.001)
-            )
+            ),
         )
         vertical_line.become(self.get_vertical_line_to_function(vt.get_value(), g_func))
         horizontal_line.become(self.get_horizontal_line_to_function(vt.get_value(), g_func))
@@ -493,24 +503,21 @@ class DistanceSurface(ParametricSurface):
         'u_max': 4,
         'v_min': -4,
         'v_max': 4,
-        'checkerboard_colors': [BLUE_D],
+        'checkerboard_colors': [BLUE_D, BLUE_E],
     }
 
     def __init__(self):
         super().__init__(self.func)
 
     def func(self, u, v):
-        return np.array([u, v, total_distance(u, v)])
+        return np.array([u, v, total_distance(u, v) / 40])
 
 
 class ThreeDExample(SpecialThreeDScene):
     CONFIG = {
         'axes_config': {
-            'x_min': -5, 'x_max': 5,
-            'y_min': -5, 'y_max': 5,
-            'z_min': -5, 'z_max': 30,
             'z_axis_config': {
-                'tick_frequency': 5,
+                'tick_frequency': 10,
                 'include_tip': False,
             },
         },
@@ -518,33 +525,43 @@ class ThreeDExample(SpecialThreeDScene):
             'fill_opacity': 0.2,
             'stroke_color': WHITE,
         },
+        'three_d_axes_config': {
+            'axis_config': {
+                'unit_size': 1,
+            },
+            'x_min': -5, 'x_max': 5,
+            'y_min': -5, 'y_max': 5,
+            'z_min': -2, 'z_max': 2,
+        },
     }
 
     def construct(self):
-        axes = ThreeDAxes()
-        self.set_camera_orientation(phi=75 * DEGREES, theta=45 * DEGREES)
-        self.play(ShowCreation(axes))
+        axes = self.get_axes()
+        labels = VGroup(*[
+            TexMobject(tex).set_color(color)
+            for tex, color in zip(
+                ["x", "y", "z"],
+                [GREEN, RED, BLUE]
+            )
+        ])
+        labels[0].next_to(axes.coords_to_point(5, 0, 0), DOWN + IN, SMALL_BUFF)
+        labels[1].next_to(axes.coords_to_point(0, 5, 0), RIGHT, SMALL_BUFF)
+        labels[2].next_to(axes.coords_to_point(0, 0, 2), RIGHT, SMALL_BUFF)
 
-        cylinder = ParametricSurface(
-            lambda u, v: np.array([
-                np.cos(TAU * v),
-                np.sin(TAU * v),
-                2 * (1 - u)
-            ]),
-            resolution=(6, 32)).fade(0.5) #Resolution of the surfaces
-        self.play(Write(cylinder))
+        self.add(axes)
+        self.add(labels)
+        for label in labels:
+            self.add_fixed_orientation_mobjects(label)
+
+        # spherical coordinates
+        # default is phi = 70 degrees, theta = -110 degrees
+        self.move_camera(**self.get_default_camera_position())
+        self.begin_ambient_camera_rotation(rate=0.05)
+        self.wait(2)
 
         surface = DistanceSurface()
-        surface = ParametricSurface(
-            lambda u, v: np.array([u, v, total_distance(u, v)]),
-            u_min=-0.5, u_max=0.5,
-            v_min=-0.5, v_max=0.5,
-        )
-        dot = Dot(np.array([1, 1, 1]))
-        self.add(dot)
-        self.play(ShowCreation(dot))
         self.play(Write(surface))
-        # self.play(Write(surface))
-        # self.play(ShowCreation(surface))
-        # self.begin_ambient_camera_rotation()
-        self.wait(1)
+        self.wait(2)
+
+        self.move_camera(phi=88 * DEGREES)
+        self.wait(2)
