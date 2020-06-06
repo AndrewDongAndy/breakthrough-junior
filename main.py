@@ -11,6 +11,10 @@ def my_wiggle(t):
     return wiggle(t, wiggles=1)
 
 
+def my_smooth(t):
+    return smooth(t, inflection=10)
+
+
 class NotationScene(Scene):
     def construct(self):
         function_notation = TexMobject(
@@ -44,59 +48,27 @@ class MaxRelatedToMin(Scene):
         self.play(Write(formula))
 
 
-passenger_locations = [
-    (-2, 3),
-    (-5, 1),
-    (-3, -2),
-    (4, 3),
-    (2, -2),
-    (2.1, -2.5),
-    (1.6, -1.8),
-    (1.9, -2.3),
-    (4, -1),
-    # (4.1, -1.3),
-    # (3.8, -0.9),
-    # (4.3, -1.4),
-]
-
-
-def total_distance(x0, y0):
-    return sum(
-        np.sqrt((x - x0) ** 2 + (y - y0) ** 2)
-        for x, y in passenger_locations
-    )
-
-
 class MovingPointScene(Scene):
     CONFIG = {
         'label_height': 0.25,
         'total_height': 0.35,
-        'test_stop_locations': [
-            (2, 2),
-            (-1, 0.5),
-            (-3, -1.25),
-            (0.5, -0.5),
-            (0, 0),
+        'test_stop_points': [
         ],
         'tmp_wiggle_points': [
-            (0.5, 0),
-            (-0.5, 0),
-            (0, 0.5),
-            (0, -0.5),
         ],
     }
 
     def get_points(self):
         points = self.points = [
             np.array([x, y, 0])
-            for x, y in passenger_locations
+            for x, y in self.passenger_locations
         ]
         return points
 
     def get_stop_points(self):
         stop_points = self.stop_points = np.array([
             np.array([x, y, 0])
-            for x, y in self.test_stop_locations
+            for x, y in self.test_stop_points
         ])
         return stop_points
 
@@ -109,6 +81,8 @@ class MovingPointScene(Scene):
 
     def get_stop_dot(self):
         stop_dot = Dot(self.stop_point)
+        stop_dot.set_color(BLUE)
+        stop_dot.scale(2)
         return stop_dot
 
     def get_lines(self, stop_point=None):
@@ -126,6 +100,8 @@ class MovingPointScene(Scene):
     def get_labels(self, num_decimal_places=3):
         assert hasattr(self, 'lines')
         labels = VGroup()
+        if not self.show_labels:
+            return labels
         for line in self.lines:
             label = DecimalNumber(
                 line.get_length(),
@@ -213,10 +189,10 @@ class MovingPointScene(Scene):
         )
         self.wait()
 
+        # this can't be earlier, as it shows the stop_dot being added
         self.init()
+
         # dot denoting the bus stop
-        self.stop_dot.set_color(BLUE)
-        self.stop_dot.scale(2)
         self.add(self.stop_dot)
         self.play(ShowCreation(self.stop_dot))
 
@@ -274,13 +250,90 @@ class MovingPointScene(Scene):
 
         # testing stop points far from origin, i.e. far from "centre of group"
         for p in self.stop_points:
-            self.move_stop_point(p, rate_func=smooth)
+            self.move_stop_point(p, rate_func=my_smooth)
             self.wait()
         self.wait(2)  # pause for 2 seconds
 
         # wiggle points
         for p in self.wiggle_points:
             self.move_stop_point(p, rate_func=wiggle, run_time=0.8)
+
+
+class MovingPointScene1(MovingPointScene):
+    CONFIG = {
+        'passenger_locations': [
+            (-2, 3),
+            (-5, 1),
+            (-3, -2),
+            (4, 3),
+            (2, -2),
+            (4, -1),
+        ],
+        'show_labels': True,
+        'test_stop_points': [
+            (1, 1),
+            (-1, 1),
+            (0, -2),
+            (0, 0),
+        ],
+        'tmp_wiggle_points': [
+            (0.5, 0),
+            (-0.5, 0),
+            (0, 0.5),
+            (0, -0.5),
+        ],
+    }
+
+
+passenger_locations = [
+    (-2, 3),
+    (-5, 1),
+    (-4, -2),
+    (-4, 3),
+    (-2, -3),
+    # (3.1, -1.4),
+    # (2.8, -0.9),
+    # (3.4, -0.4),
+    # (3.3, -0.6),
+    # (3.5, -1),
+    *[
+        (2 + 0.3 * i, 1 + 0.3 * j)
+        for j in range(-1, 2)
+        for i in range(-1, 2)
+    ],
+    # (4.1, -1.3),
+    # (3.8, -0.9),
+    # (4.3, -1.4),
+]
+
+
+def total_distance(x0, y0):
+    return sum(
+        np.sqrt((x - x0) ** 2 + (y - y0) ** 2)
+        for x, y in passenger_locations
+    )
+
+
+class MovingPointSceneWithCluster(MovingPointScene):
+    CONFIG = {
+        'passenger_locations': passenger_locations,
+        'show_labels': False,
+        'test_stop_points': [
+            (1, 1),
+            (-1, 1),
+            (0, -2),
+            (2, 1),
+        ],
+        'tmp_wiggle_points': [
+            (2 + 0.5 * i, 1 + 0.5 * j)
+            for i, j in [
+                (1, 0),
+                (0, 1),
+                (-1, 0),
+                (0, -1),
+            ]
+        ],
+    }
 
 
 class ParabolaExample(GraphScene):
@@ -407,7 +460,7 @@ class ParabolaExample(GraphScene):
         self.play(
             ApplyMethod(
                 vt.set_value, self.sweep_end,
-                rate_func=smooth,
+                rate_func=my_smooth,
             ),
             UpdateFromFunc(vertical_line, get_vertical_line_updater(f_func)),
             UpdateFromFunc(horizontal_line, get_horizontal_line_updater(f_func)),
@@ -446,7 +499,7 @@ class ParabolaExample(GraphScene):
         self.play(
             ApplyMethod(
                 vt.set_value, self.sweep_end,
-                rate_func=smooth,
+                rate_func=my_smooth,
             ),
             UpdateFromFunc(vertical_line, get_vertical_line_updater(g_func)),
             UpdateFromFunc(horizontal_line, get_horizontal_line_updater(g_func)),
@@ -497,45 +550,103 @@ class ParabolaExample(GraphScene):
         self.wait(2)
 
 
-class DistanceSurface(ParametricSurface):
-    CONFIG = {
-        'u_min': -4,
-        'u_max': 4,
-        'v_min': -4,
-        'v_max': 4,
-        'checkerboard_colors': [BLUE_D, BLUE_E],
-    }
-
-    def __init__(self):
-        super().__init__(self.func)
-
-    def func(self, u, v):
-        return np.array([u, v, total_distance(u, v) / 40])
-
-
 class ThreeDExample(SpecialThreeDScene):
     CONFIG = {
-        'axes_config': {
-            'z_axis_config': {
-                'tick_frequency': 10,
-                'include_tip': False,
-            },
-        },
-        'default_surface_config': {
-            'fill_opacity': 0.2,
-            'stroke_color': WHITE,
-        },
+        # 'axes_config': {
+        #     'z_axis_config': {
+        #         'tick_frequency': 10,
+        #         'include_tip': False,
+        #     },
+        # },
+        # 'default_surface_config': {
+        #     'fill_opacity': 0.2,
+        #     'stroke_color': WHITE,
+        # },
         'three_d_axes_config': {
             'axis_config': {
                 'unit_size': 1,
             },
             'x_min': -5, 'x_max': 5,
             'y_min': -5, 'y_max': 5,
-            'z_min': -2, 'z_max': 2,
+            'z_min': -1, 'z_max': 3,
         },
     }
 
-    def construct(self):
+    def surface_func(self, u, v):
+        return total_distance(u, v) / 30
+
+    def get_input_dot(self):
+        d = Dot(
+            self.input_point,
+            color=GREEN,
+        )
+        d.scale(2)
+
+    def get_output_point(self, input_point=None):
+        if input_point is None:
+            input_point = self.input_point
+        return np.array([
+            input_point[0],
+            input_point[1],
+            self.surface_func(input_point[0], input_point[1])
+        ])
+
+    def get_output_dot(self, input_point=None):
+        point = self.get_output_point(input_point)
+        point[2] -= EPSILON
+        return Dot(
+            point,
+            # color=GREEN,
+        )
+
+    def get_surface(self):
+        return ParametricSurface(
+            lambda u, v: self.get_output_point(np.array([u, v, 0])),
+            u_min=-4, u_max=4,
+            v_min=-4, v_max=4,
+            checkerboard_colors=[BLUE_D, BLUE_E],
+            resolution=16,
+        )
+
+    def get_vertical_line(self, input_point=None, color=YELLOW):
+        if input_point is None:
+            input_point = self.input_point
+        return DashedLine(
+            input_point,
+            self.get_output_point(input_point),
+            color=color,
+        )
+
+    def get_input_point(self, start, end, t):
+        return (1 - t) * start + t * end
+
+    def move_input_point(self, end_point, rate_func, run_time=2):
+        start_point = self.input_point
+        vt = ValueTracker(0)
+
+        def update_input_dot(dot):
+            self.input_point = self.get_input_point(start_point, end_point, vt.get_value())
+            dot.move_to(self.input_point)
+
+        def update_output_dot(dot):
+            dot.move_to(self.get_output_point())
+
+        def update_vertical_line(line):
+            line.become(self.get_vertical_line())
+
+        self.play(
+            ApplyMethod(
+                vt.set_value, 1,
+                rate_func=rate_func,
+            ),
+            UpdateFromFunc(self.input_dot, update_input_dot),
+            UpdateFromFunc(self.output_dot, update_output_dot),
+            UpdateFromFunc(self.vertical_line, update_vertical_line),
+            run_time=2,
+        )
+        self.input_point = self.get_input_point(start_point, end_point, 1)
+
+    def setup_axes(self):
         axes = self.get_axes()
         labels = VGroup(*[
             TexMobject(tex).set_color(color)
@@ -544,24 +655,67 @@ class ThreeDExample(SpecialThreeDScene):
                 [GREEN, RED, BLUE]
             )
         ])
-        labels[0].next_to(axes.coords_to_point(5, 0, 0), DOWN + IN, SMALL_BUFF)
-        labels[1].next_to(axes.coords_to_point(0, 5, 0), RIGHT, SMALL_BUFF)
-        labels[2].next_to(axes.coords_to_point(0, 0, 2), RIGHT, SMALL_BUFF)
-
+        labels[0].next_to(axes.coords_to_point(self.three_d_axes_config['x_max'], 0, 0), DOWN + IN, SMALL_BUFF)
+        labels[1].next_to(axes.coords_to_point(0, self.three_d_axes_config['y_max'], 0), RIGHT, SMALL_BUFF)
+        labels[2].next_to(axes.coords_to_point(0, 0, self.three_d_axes_config['z_max']), RIGHT, SMALL_BUFF)
         self.add(axes)
         self.add(labels)
         for label in labels:
             self.add_fixed_orientation_mobjects(label)
 
+    def construct(self):
+        self.setup_axes()
+
+        # input plane
+        input_plane = ParametricSurface(
+            lambda x, y: np.array([x, y, 0]),
+            u_min=-4, u_max=4,
+            v_min=-4, v_max=4,
+            resolution=16,
+        )
+        input_plane.set_style(
+            fill_opacity=0.2,
+            fill_color=BLUE_B,
+            stroke_width=0.5,
+            stroke_color=WHITE,
+        )
+
+        self.input_point = ORIGIN
+        self.input_dot = Dot(self.input_point)
+        self.output_dot = self.get_output_dot()
+        self.vertical_line = self.get_vertical_line()
+        surface = self.get_surface()
+
         # spherical coordinates
         # default is phi = 70 degrees, theta = -110 degrees
+
         self.move_camera(**self.get_default_camera_position())
-        self.begin_ambient_camera_rotation(rate=0.05)
+        # self.begin_ambient_camera_rotation(rate=0.05)
         self.wait(2)
 
-        surface = DistanceSurface()
+        self.play(Write(input_plane))
+        self.wait(2)
+
         self.play(Write(surface))
         self.wait(2)
 
-        self.move_camera(phi=88 * DEGREES)
+        self.play(ShowCreation(self.input_dot))
+        self.play(
+            ShowCreation(self.output_dot),
+            ShowCreation(self.vertical_line),
+        )
+
+        self.move_camera(phi=80 * DEGREES)
         self.wait(2)
+
+        self.move_input_point(
+            np.array([-2, -2, 0]),
+            rate_func=my_smooth,
+        )
+        self.wait(2)
+        self.move_input_point(
+            np.array([2, 1, 0]),
+            rate_func=linear,
+            run_time=8,
+        )
+        self.wait(5)
