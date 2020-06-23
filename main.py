@@ -1,4 +1,11 @@
 """
+HACK: to run any MovingPoint scenes, comment out lines 990 and 991 in mobject/mobject.py to speed up rendering
+and avoid O(n^2) behaviour. However, using Transform requires uncommenting those back, e.g. in the explanation scenes
+near the bottom of this file.
+
+Another "hack", but less so. The original value of "open_angle" in the Laptop class of mobject/svg/drawings.py is
+np.pi / 4, but I changed it to 70 * DEGREES as the default.
+
 TODO:
 - check the Quaternion video source code to see how to add a short video to the background with transparency:
     https://www.youtube.com/watch?v=d4EgbgTm0Bg, at 27:44
@@ -7,6 +14,10 @@ Ideas:
 When going from 2d to 3d, add the 3rd axis as 3Blue1Brown did in the Fourier DE2 video.
 Then, also add the tangent plane.
 - draw connection between gravity and direction of steepest descent?
+
+June 22, 2020:
+Today, I learned (TIL) that changing the underlying library can be detrimental, because the "hack" at the top of this
+comment block is the very reason Transform() animations weren't working.
 """
 
 from manimlib.imports import *
@@ -18,281 +29,6 @@ def my_wiggle(t):
 
 def my_smooth(t):
     return smooth(t, inflection=10)
-
-
-# deleted stuff
-class MyParametricSurface:
-    def __init__(self, func, **kwargs):
-        self.func = func
-        self.config = kwargs
-
-    def surface(self):
-        return ParametricSurface(
-            lambda u, v: np.array([u, v, self.func(u, v)]),
-            **self.config,
-        )
-
-    def tangent_plane_point(self, x0, y0, x, y):
-        z0 = self.func(x0, y0)
-        partial_x = (self.func(x0 + EPSILON, y0) - z0) / EPSILON
-        partial_y = (self.func(x0, y0 + EPSILON) - z0) / EPSILON
-        return z0 + partial_x * (x - x0) + partial_y * (y - y0)
-
-    def tangent_plane(self, x0, y0):
-        return ParametricSurface(
-            lambda u, v: np.array([u, v, self.tangent_plane_point(x0, y0, u, v)]),
-            u_min=x0 - 2, u_max=x0 + 2,
-            v_min=y0 - 2, v_max=y0 + 2,
-            resolution=10,
-        ).set_style(
-            fill_color=GREEN,
-            fill_opacity=1.0,
-            stroke_color=GREEN,
-            stroke_width=0.5,
-        )
-
-
-class ThreeDExample(SpecialThreeDScene):
-    CONFIG = {
-        # 'axes_config': {
-        #     'z_axis_config': {
-        #         'tick_frequency': 10,
-        #         'include_tip': False,
-        #     },
-        # },
-        # 'default_surface_config': {
-        #     'fill_opacity': 0.2,
-        #     'stroke_color': WHITE,
-        # },
-        'three_d_axes_config': {
-            'axis_config': {
-                'unit_size': 1,
-            },
-            'x_min': -5, 'x_max': 5,
-            'y_min': -5, 'y_max': 5,
-            'z_min': -3, 'z_max': 4,
-        },
-        'my_surface': MyParametricSurface(
-            lambda u, v: 1 + 0.1 * (u ** 2) + 0.1 * (v ** 2),
-            u_min=-4, u_max=4,
-            v_min=-4, v_max=4,
-            # checkerboard_colors=[BLUE_D, BLUE_E],
-            resolution=32,
-        ),
-        # the bus stop example
-        # 'my_surface': ParametricSurface(
-        #     lambda u, v: self.get_output_point(u, v),
-        #     u_min=-4, u_max=4,
-        #     v_min=-4, v_max=4,
-        #     # checkerboard_colors=[BLUE_D, BLUE_E],
-        #     resolution=32,
-        # ),
-    }
-
-    # def surface_func(self, u, v):
-    #     return total_distance(u, v) * self.scale_factor
-
-    def get_input_dot(self):
-        return Dot(self.input_point, color=GREEN).scale(2)
-
-    def get_output_point(self, input_point=None):
-        if input_point is None:
-            input_point = self.input_point
-        u, v, _ = input_point
-        return np.array([u, v, self.my_surface.func(u, v)])
-
-    def get_output_dot(self, input_point=None):
-        point = self.get_output_point(input_point)
-        point[2] -= EPSILON
-        # print(point)
-        return Dot(point)
-
-    # def get_surface(self):
-    #     # paraboloid
-    #     a = 0.1
-    #     b = 0.1
-    #     return ParametricSurface(
-    #         lambda u, v: np.array([u, v, 1 + a * (u ** 2) + b * (v ** 2)]),
-    #         u_min=-4, u_max=4,
-    #         v_min=-4, v_max=4,
-    #         # checkerboard_colors=[BLUE_D, BLUE_E],
-    #         resolution=32,
-    #     )
-
-    def get_tangent_plane(self):
-        x, y, _ = self.input_point
-        return self.my_surface.tangent_plane(x, y)
-        # return ParametricSurface(
-        #     lambda u, v: np.array([u, v, tangent_plane_value(x, y, u, v) * self.scale_factor - EPSILON]),
-        #     u_min=x - 4, u_max=x + 4,
-        #     v_min=y - 4, v_max=y + 4,
-        #     resolution=1,
-        # ).set_style(
-        #     fill_color=GREEN,
-        #     fill_opacity=1.0,
-        #     stroke_color=WHITE,
-        #     stroke_width=0.5,
-        # )
-
-    def get_vertical_line(self, input_point=None, color=YELLOW):
-        if input_point is None:
-            input_point = self.input_point
-        return Line(
-            input_point,
-            self.get_output_point(input_point),
-            color=color,
-        )
-
-    @staticmethod
-    def get_input_point(start, end, t):
-        return (1 - t) * start + t * end
-
-    def move_input_point(self, end_point, rate_func, run_time=2):
-        start_point = self.input_point
-        vt = ValueTracker(0)
-
-        def update_input_dot(dot):
-            self.input_point = self.get_input_point(start_point, end_point, vt.get_value())
-            dot.move_to(self.input_point)
-
-        def update_output_dot(dot):
-            dot.move_to(self.get_output_point())
-
-        def update_vertical_line(line):
-            line.become(self.get_vertical_line())
-
-        def update_tangent_plane(plane):
-            plane.become(self.get_tangent_plane())
-
-        self.play(
-            ApplyMethod(
-                vt.set_value, 1,
-                rate_func=rate_func,
-            ),
-            UpdateFromFunc(self.input_dot, update_input_dot),
-            UpdateFromFunc(self.output_dot, update_output_dot),
-            UpdateFromFunc(self.vertical_line, update_vertical_line),
-            UpdateFromFunc(self.tangent_plane, update_tangent_plane),
-            run_time=run_time,
-        )
-        # self.input_point = self.get_input_point(start_point, end_point, 1)
-
-    def setup_axes(self):
-        axes = self.get_axes()
-        labels = VGroup(*[
-            TexMobject(tex).set_color(color)
-            for tex, color in zip(
-                ["x", "y", "z"],
-                [GREEN, RED, BLUE]
-            )
-        ])
-        labels[0].next_to(axes.coords_to_point(self.three_d_axes_config['x_max'], 0, 0), DOWN + IN, SMALL_BUFF)
-        labels[1].next_to(axes.coords_to_point(0, self.three_d_axes_config['y_max'], 0), RIGHT, SMALL_BUFF)
-        labels[2].next_to(axes.coords_to_point(0, 0, self.three_d_axes_config['z_max'] - 0.5), RIGHT, SMALL_BUFF)
-        self.add(axes)
-        self.add(labels)
-        for label in labels:
-            self.add_fixed_orientation_mobjects(label)
-
-    def init(self):
-        self.setup_axes()
-        self.scale_factor = 1 / 10
-        self.input_point = ORIGIN
-        self.input_dot = Dot(self.input_point)
-        self.output_dot = self.get_output_dot()
-        self.vertical_line = self.get_vertical_line()
-        self.surface = self.my_surface.surface()
-        self.tangent_plane = self.my_surface.tangent_plane(self.input_point[0], self.input_point[1])
-
-    def construct(self):
-        self.init()
-
-        # input plane
-        input_plane = ParametricSurface(
-            lambda x, y: np.array([x, y, 0]),
-            u_min=-4, u_max=4,
-            v_min=-4, v_max=4,
-            resolution=16,
-        ).set_style(
-            fill_opacity=0.2,
-            fill_color=BLUE_B,
-            stroke_width=0.5,
-            stroke_color=WHITE,
-        )
-
-        # camera position uses spherical coordinates
-        # default is phi = 70 degrees, theta = -110 degrees
-
-        self.move_camera(**self.get_default_camera_position())
-        # self.begin_ambient_camera_rotation(rate=0.05)  # comment out for faster rendering
-        self.wait(2)
-
-        self.play(Write(input_plane))
-        self.wait(2)
-
-        self.play(Write(self.surface))
-        self.wait(2)
-
-        # input stuff
-        self.play(ShowCreation(self.input_dot))
-        self.play(
-            ShowCreation(self.output_dot),
-            ShowCreation(self.vertical_line),
-        )
-        self.play(Write(self.tangent_plane))
-        self.wait(1)
-
-        # view from the side to see the curvature of the plane
-        self.move_camera(phi=80 * DEGREES)
-        self.wait(2)
-
-        # start at a non-optimal bus stop location
-        self.move_input_point(
-            np.array([-2, -2, 0]),
-            rate_func=my_smooth,
-        )
-        self.wait(2)
-
-        # move to the optimal (?) location
-        self.move_input_point(
-            np.array([1.9, 1.1, 0]),
-            rate_func=linear,
-            run_time=8,
-        )
-        self.wait(5)
-
-
-class NotationScene(Scene):
-    def construct(self):
-        function_notation = TexMobject(
-            'f : S \\rightarrow \\mathbb{R}}'
-        ).scale(1.5)
-        min_notation = TexMobject('\\min_{x \\in S} f(x)').scale(1.5)
-        VGroup(function_notation, min_notation).arrange(DOWN)
-        self.play(
-            Write(function_notation),
-            FadeInFromDown(min_notation),
-        )
-        self.wait()
-
-        # transform to the more concise version
-        transform_min_notation = TexMobject('\\min f').scale(1.5)
-        # transform_min_notation.to_corner(UL)
-        self.play(
-            Transform(min_notation, transform_min_notation),
-            LaggedStart(*map(FadeOutAndShiftDown, function_notation)),
-        )
-        self.wait()
-
-
-class MaxRelatedToMin(Scene):
-    def construct(self):
-        formula = TexMobject(
-            '\\max_{x \\in S} f(x)'
-            ' = -\\min_{x \\in S} (-f(x))'
-        ).scale(2)
-        # formula.arrange(DOWN)
-        self.play(Write(formula))
 
 
 # non-deleted scenes
@@ -516,7 +252,7 @@ class MovingPointScene(Scene):
         total_decimal.set_height(self.total_height)
         total_decimal.add_updater(update_total_decimal)
 
-        # minimization text
+        # minimization text; TODO: use \\text{stuff} instead of VGroup?
         minimize_text = TextMobject('Formally, we want to minimize the function')
         # minimize_text.set_color(GREEN)
         expression = TexMobject('f(x, y) = \\dfrac{1}{8} \\sum_{i=1}^{8} \\sqrt{ (x - x_i)^2 + (y - y_i)^2.')
@@ -542,6 +278,7 @@ class MovingPointScene(Scene):
         equiv_group.to_edge(RIGHT)
 
         # maximizing and minimizing are the same problem
+        # TODO: use \text{stuff} instead of VGroup.arrange?
         max_text = TextMobject('Maximization and minimization are equivalent problems, since')
         max_tex = TexMobject('\\max f = -\\min (-f).')
         max_min_jargon = VGroup(max_text, max_tex)
@@ -730,224 +467,11 @@ class MovingPointScene2(MovingPointScene):
     }
 
 
-class ParabolaExample(GraphScene):
-    CONFIG = {
-        'x_min': -1,
-        'x_max': 13,
-        'x_labeled_nums': list(range(1, 11)),
-        'y_min': -10,
-        'y_max': 100,
-        'y_tick_frequency': 10,
-        'y_labeled_nums': list(range(20, 120, 20)),
-        'y_axis_label': '$y$',
-        'sweep_start': 1,
-        'sweep_end': 9,
-        'parabola_vertex': 5,  # x-coordinate only
-    }
-
-    def get_vertical_line_to_function(self, x, func, color=YELLOW):
-        return Line(
-            self.coords_to_point(x, 0),
-            self.coords_to_point(x, func(x)),
-            color=color,
-        )
-
-    def get_horizontal_line_to_function(self, x, func, color=YELLOW):
-        return Line(
-            self.coords_to_point(x, func(x)),
-            self.coords_to_point(0, func(x)),
-            color=color,
-        )
-
-    def construct(self):
-        # self.set_camera_background('image?')
-        self.setup_axes()
-
-        def f_func(x):
-            return 90 - (x - 5) ** 2
-
-        # def f_tangent(x0):
-        #     def f(x):
-        #         return -2 * (x - 5) * (x - x0) + f_func(x0)
-        #     return f
-
-        f = self.get_graph(
-            f_func,
-            color=ORANGE,
-            x_min=0,
-            x_max=12,
-        )
-        f_label = TexMobject(
-            'y'
-            ' = 90 - (x - 5)^2'
-        )
-        f_label.next_to(f.get_point_from_function(0.6), UR)
-
-        def g_func(x):
-            return 100 - f_func(x)
-
-        # def g_tangent(x0):
-        #     def f(x):
-        #         return 2 * (x - 5) * (x - x0) + g_func(x)
-        #     return f
-
-        g = self.get_graph(
-            g_func,
-            color=BLUE,
-            x_min=0,
-            x_max=12,
-        )
-        g_label = TexMobject(
-            'y'
-            ' = 100 - (90 - (x - 5)^2)'
-            # ' = 100 - f(x)'
-        )
-        g_label.next_to(
-            g.get_point_from_function(1.0),
-            direction=UP,
-            buff=LARGE_BUFF,
-        )
-
-        vt = ValueTracker(self.sweep_start)  # x-coordinate
-        vertical_line = self.get_vertical_line_to_function(
-            vt.get_value(), f_func,
-            # line_class=DashedLine,
-            color=YELLOW,
-        )
-        horizontal_line = self.get_horizontal_line_to_function(
-            vt.get_value(), f_func,
-            color=YELLOW,
-        )
-        secant_group = self.get_secant_slope_group(vt.get_value(), f, dx=0.001)
-
-        def get_vertical_line_updater(func):
-            def updater(line):
-                line.become(self.get_vertical_line_to_function(vt.get_value(), func))
-            return updater
-
-        def get_horizontal_line_updater(func):
-            def updater(line):
-                line.become(self.get_horizontal_line_to_function(vt.get_value(), func))
-            return updater
-
-        def get_secant_group_updater(graph):
-            def updater(s):
-                s.become(self.get_secant_slope_group(vt.get_value(), graph, dx=0.001))
-            return updater
-
-        # animations
-        self.play(FadeIn(self.axes))
-        self.wait()
-        self.play(
-            ShowCreation(f),
-            Write(f_label),
-        )
-        self.wait()
-        self.play(
-            ShowCreation(vertical_line),
-        )
-        self.play(
-            ShowCreation(horizontal_line),
-            ShowCreation(secant_group),
-        )
-        self.wait()
-        self.play(
-            ApplyMethod(
-                vt.set_value, self.sweep_end,
-                rate_func=my_smooth,
-            ),
-            UpdateFromFunc(vertical_line, get_vertical_line_updater(f_func)),
-            UpdateFromFunc(horizontal_line, get_horizontal_line_updater(f_func)),
-            UpdateFromFunc(secant_group, get_secant_group_updater(f)),
-            run_time=2,
-        )
-        self.wait()
-        vt.set_value(self.sweep_start)
-        self.play(
-            ShowCreation(g),
-            Write(g_label),
-            FadeOut(f),
-            FadeOutAndShiftDown(f_label),
-            Transform(
-                vertical_line,
-                self.get_vertical_line_to_function(vt.get_value(), g_func)
-            ),
-            Transform(
-                horizontal_line,
-                self.get_horizontal_line_to_function(vt.get_value(), g_func)
-            ),
-            Transform(
-                secant_group,
-                self.get_secant_slope_group(vt.get_value(), g, dx=0.001)
-            ),
-        )
-        vertical_line.become(self.get_vertical_line_to_function(vt.get_value(), g_func))
-        horizontal_line.become(self.get_horizontal_line_to_function(vt.get_value(), g_func))
-        secant_group.become(self.get_secant_slope_group(vt.get_value(), g, dx=0.001))
-        self.wait(2)
-        # self.remove(
-        #     vertical_line,
-        #     horizontal_line,
-        #     secant_group,
-        # )
-        self.play(
-            ApplyMethod(
-                vt.set_value, self.sweep_end,
-                rate_func=my_smooth,
-            ),
-            UpdateFromFunc(vertical_line, get_vertical_line_updater(g_func)),
-            UpdateFromFunc(horizontal_line, get_horizontal_line_updater(g_func)),
-            UpdateFromFunc(secant_group, get_secant_group_updater(g)),
-            run_time=2,
-        )
-
-        self.wait(2)
-
-        self.play(
-            ApplyMethod(
-                vt.set_value, self.parabola_vertex,
-                rate_func=smooth,
-            ),
-            UpdateFromFunc(vertical_line, get_vertical_line_updater(g_func)),
-            UpdateFromFunc(horizontal_line, get_horizontal_line_updater(g_func)),
-            UpdateFromFunc(secant_group, get_secant_group_updater(g)),
-            run_time=2,
-        )
-        self.wait(2)
-
-        self.play(
-            ApplyMethod(
-                vt.set_value, self.parabola_vertex + 0.3,
-                rate_func=my_wiggle,
-            ),
-            UpdateFromFunc(vertical_line, get_vertical_line_updater(g_func)),
-            UpdateFromFunc(horizontal_line, get_horizontal_line_updater(g_func)),
-            UpdateFromFunc(secant_group, get_secant_group_updater(g)),
-            run_time=2,
-        )
-        self.play(
-            ApplyMethod(
-                vt.set_value, self.parabola_vertex - 0.3,
-                rate_func=my_wiggle,
-            ),
-            UpdateFromFunc(vertical_line, get_vertical_line_updater(g_func)),
-            UpdateFromFunc(horizontal_line, get_horizontal_line_updater(g_func)),
-            UpdateFromFunc(secant_group, get_secant_group_updater(g)),
-            run_time=2,
-        )
-
-        # f_prime = self.get_derivative_graph(f)
-        # self.play(
-        #     ShowCreation(f_prime),
-        # )
-        # self.wait()
-        self.wait(2)
+FOOTNOTE_SCALE = 0.35
 
 
 class GradientScene(Scene):
     def construct(self):
-        # self.set_camera_background()
-
         SHOW_GRID = False
         X_CUTOFF = -0.8
 
@@ -990,6 +514,10 @@ class GradientScene(Scene):
         calculus_group.to_edge(LEFT)
         calculus_group.move_to(calculus_group.get_center() + np.array([0, -1, 0]))
 
+        # divider
+        divider = Line(np.array([-3.94, -0.5, 0]), np.array([-3.94, -2.7, 0]))
+        divider.set_stroke(width=1)
+
         # Linear Algebra stuff
         linear_algebra = TextMobject('\\underline{Linear Algebra}').scale(0.7)
         vector = TexMobject('\\vec{u} = \\begin{bmatrix}1 \\\\ 2\\end{bmatrix}').scale(0.6)
@@ -1016,85 +544,98 @@ class GradientScene(Scene):
         nabla_group.move_to(nabla)
         # print(nabla2.get_center())
 
-        # left brace
-        # brace = TexMobject('\\left\\{')
-        # brace.scale(2.5)
-        # brace.rotate(90 * DEGREES)
-        # # brace.next_to(with_args, DOWN, buff=SMALL_BUFF)
-        # brace.move_to(np.array([-3, 1, 0]))
-        brace = Brace(func_args, DOWN)
+        # annotations
 
-        # caption
+        # "the gradient of f"
+        # TODOne: use \text{stuff} instead of VGroup().arrange()?
+        # gradient_text = TextMobject('``gradient of')
+        # f = TexMobject('f')
+        # right_quote = TextMobject("''")
+        # term_group = VGroup(gradient_text, f, right_quote)
+        # term_group.arrange(RIGHT, aligned_edge=UP, buff=SMALL_BUFF)
+        term_group = TexMobject("\\text{``gradient of } f \\text{''}")
+        term_group.scale(0.5)
+        term_group.next_to(nabla, UP, buff=SMALL_BUFF)
+
+        # left brace
+        brace = Brace(func_args, DOWN)
+        # any point
         any_point = TextMobject('any point')
-        any_point.scale(0.6)
+        any_point.scale(0.5)
         any_point.next_to(brace, DOWN, buff=SMALL_BUFF)
 
         # footnote to clarify gradient
         footnote = TextMobject(
-            'Technically, the gradient gives us a vector pointing us in the\n'
-            'direction of steepest \\textit{ascent}. Therefore, the direction\n'
+            'Technically, the gradient gives us a vector pointing us in the '
+            'direction of steepest \\textit{ascent}. Therefore, the direction '
             'of steepest \\textit{descent} is given by the \\textit{negative} of the gradient.'
         )
         # footnote.to_edge(DOWN, buff=SMALL_BUFF)
-        footnote.scale(0.35)
+        footnote.scale(FOOTNOTE_SCALE)
         footnote.arrange(RIGHT, center=False)
         footnote.to_corner(DL, buff=0.2)
 
         # animations start below
-        self.play(Write(title))
-        self.wait(0.5)
+        self.wait(0.3)
         self.play(Write(definition))
-        self.wait(0.5)
+        self.wait(1.4)
+        self.play(FadeInFromLarge(title))
+        self.wait(1)
 
         EM_SCALE = 1.1  # scale factor used to emphasize a word
-        EM_SHIFT = np.array([0, 0.2, 0])  # shift to emphasize
+        EM_SHIFT = 0.1  # shift to emphasize
 
         gradient.set_color(YELLOW)
         self.play(
-            # ApplyMethod(gradient.scale, EM_SCALE),
-            # ApplyMethod(gradient.set_color, YELLOW),
-            ApplyMethod(gradient.move_to, gradient.get_center() + EM_SHIFT),
+            LaggedStart(
+                AnimationGroup(
+                    ApplyMethod(gradient.set_y, gradient.get_y() + EM_SHIFT),
+                    Write(nabla),
+                    Write(term_group),
+                ),
+                AnimationGroup(
+                    FadeInFrom(calculus_group, LEFT),
+                    FadeInFrom(linalg_group, RIGHT),
+                    FadeIn(divider),
+                ),
+                lag_ratio=0.3,
+            ),
         )
-        self.play(Write(nabla))
-        self.wait(1)
-
-        # "calculus and linear algebra"
-        self.play(
-            Write(calculus_group),
-            Write(linalg_group),
-        )
+        self.wait(3)
 
         # animate in the arguments of the function
         self.play(
             ApplyMethod(
                 nabla.move_to, nabla2.get_center()
             ),
+            MaintainPositionRelativeTo(term_group, nabla),
             FadeInFromDown(func_args),
-        )
-        self.wait(1)
-        # show brace and label
-        self.play(
             Write(brace),
             Write(any_point),
+        )
+        # show brace and label
+        self.play(
             FadeInFromDown(footnote),
         )
-        self.wait(2)
 
-        gradient.set_color(WHITE)
+        # emphasize the word "descent"
         descent.set_color(YELLOW)
         self.play(
             # ApplyMethod(gradient.scale, 1 / EM_SCALE),
-            ApplyMethod(gradient.move_to, gradient.get_center() - EM_SHIFT),
+            ApplyMethod(gradient.set_y, gradient.get_y() - EM_SHIFT),
             # ApplyMethod(gradient.set_color, WHITE),
 
             # ApplyMethod(descent.scale, EM_SCALE),
-            ApplyMethod(descent.move_to, descent.get_center() + EM_SHIFT),
+            ApplyMethod(descent.set_y, descent.get_y() + EM_SHIFT),
             # ApplyMethod(gradient.set_color, YELLOW),
         )
-        self.wait(2)
+        gradient.set_color(WHITE)
+        self.wait(1.5)
+
+        # unemphasize the word "descent"
         self.play(
             # ApplyMethod(descent.scale, 1 / EM_SCALE),
-            ApplyMethod(descent.move_to, descent.get_center() - EM_SHIFT),
+            ApplyMethod(descent.set_y, descent.get_y() - EM_SHIFT),
             # ApplyMethod(gradient.set_color, WHITE),
         )
         descent.set_color(WHITE)
@@ -1103,4 +644,368 @@ class GradientScene(Scene):
 
 class AlphaGoScene(Scene):
     def construct(self):
-        pass
+        # self.set_camera_background()
+
+        # for debugging purposes; not in final video
+        SHOW_GRID = False
+        X_CUTOFF = +0.8
+        X_CENTRE = 4
+
+        if SHOW_GRID:
+            grid = NumberPlane()
+            self.add(grid)
+
+        line = Line(
+            np.array([X_CUTOFF, -4, 0]),
+            np.array([X_CUTOFF, 4, 0])
+        )
+        self.add(line)
+
+        # AlphaGo logo .png file
+        logo = ImageMobject('AlphaGo_Logo.png')
+        logo.scale(0.6)
+        logo.move_to(np.array([X_CENTRE, 3, 0]))
+        self.add(logo)
+
+        how = TextMobject('How!?')
+        how.next_to(logo, DOWN, LARGE_BUFF)
+        good_strategy = TextMobject('A good strategy.')
+        good_strategy.next_to(how, DOWN)
+
+        header = TextMobject('\\underline{Strategy for playing Go}')
+        header.scale(0.75)
+        header.next_to(logo, DOWN, buff=MED_LARGE_BUFF)
+
+        # disclaimer
+        # TODO: verify/edit this
+        # talk about how AlphaGo uses this idea to direct its computational power
+        # "reinforcement learning"
+        disclaimer = TextMobject(
+            'Of course, this is not the exact way AlphaGo learns; the state-of-the-art algorithms used by '
+            'AlphaGo are much more intricate. Nonetheless, some degree of quantifiability is '
+            'certainly required. AlphaGo uses a technique known as \\textit{reinforcement learning}.'
+        )
+        disclaimer.scale(FOOTNOTE_SCALE)
+        disclaimer.to_edge(DOWN, buff=0.2)
+        disclaimer.set_x(X_CENTRE)
+
+        # strategy
+        strategy_words = TextMobject('DEFEND TERRITORY AT ALL COSTS')
+        # TODO: use \text{stuff} instead of VGroup().arrange()?
+        arrow = TexMobject('\downarrow')
+        convert = TextMobject('encoded as').scale(0.9)
+        arrow_group = VGroup(arrow, convert).arrange(RIGHT, buff=MED_SMALL_BUFF)
+        strategy_code = TexMobject('(0.3, -0.5, -0.8, 0.9, 0.7)')
+        strategy_group = VGroup(
+            strategy_words,
+            arrow_group,
+            strategy_code,
+        )
+        strategy_group.arrange(DOWN)
+        strategy_group.scale(0.6)
+        strategy_group.next_to(header, DOWN, MED_SMALL_BUFF)
+        strategy_code_general = TexMobject('(x_1, x_2, x_3, \\cdots, x_n)').scale(0.6)
+        strategy_code_general.move_to(strategy_code)
+
+        # arrow = CurvedArrow()
+        optimize = TextMobject('optimize these numbers')
+
+        # spaces inside the braces are required here
+        where_n_is_large = TexMobject('\\text{where } n \\text{ is {\LARGE large}}').scale(0.6)
+        where_n_is_large.next_to(strategy_code_general, RIGHT)
+
+        # for positioning purposes
+        strategy_code_general2 = strategy_code_general.copy()
+        # where_n_is_large2 = where_n_is_large
+        VGroup(strategy_code_general2, where_n_is_large).arrange(RIGHT).next_to(arrow_group, DOWN)
+
+        # show that this means the input is n-dimensional
+        arg_brace = Brace(strategy_code_general2, direction=DOWN, buff=SMALL_BUFF)
+        dim_text = TexMobject('n \\text{-dimensional space}')
+        dim_text.scale(0.4)
+        dim_text.next_to(arg_brace, DOWN, buff=SMALL_BUFF)
+        strat = TextMobject('of strategies')
+        strat.scale(0.4)
+        strat.next_to(dim_text, DOWN, buff=SMALL_BUFF)
+        brace_group = VGroup(arg_brace, dim_text, strat)
+
+        footnote = TextMobject(
+            "Here, ``strategy'' refers to the procedure, the set of instructions, that is followed to "
+            "determine how a task is gone about being achieved."
+        )
+        footnote.scale(FOOTNOTE_SCALE)
+        footnote.to_edge(DOWN, buff=0.2)
+        footnote.set_x(X_CENTRE)
+
+        battle = TextMobject('Which strategy is better?').scale(0.75)
+        blue = Laptop(width=0.5, body_color=BLUE)
+        vs = TextMobject('vs.').scale(0.5)
+        orange = Laptop(width=0.5, body_color=ORANGE)
+        comps = VGroup(blue, vs, orange).arrange(RIGHT)
+        battle.next_to(comps, UP)
+        comp_group = VGroup(battle, blue, vs, orange)
+        comp_group.next_to(disclaimer, UP, buff=0.5)
+
+        # after transform
+        centred_comp_group = comp_group.copy().move_to(ORIGIN).scale(2)
+        # blue2 = blue.copy().move_to(np.array([-3, 3, 0]))
+        # orange2 = orange.copy().move_to(np.array([-3, 3, 0]))
+
+        # table showing results
+        table_lines = VGroup(
+            Line(np.array([-4, -3.5, 0]), np.array([-4, 3.5, 0])),      # left vertical line
+            Line(np.array([-2.5, -3.5, 0]), np.array([-2.5, 3.5, 0])),  # right vertical line
+            Line(np.array([-6, 2.5, 0]), np.array([-1, 2.5, 0])),       # horizontal line below headers
+            Line(np.array([-6, -3, 0]), np.array([-1, -3, 0])),         # horizontal line above total
+        )
+
+        # constants
+        IMAGE_Y = 3
+        # ROW1_Y = -0.5
+        # ROW2_Y = -2.5
+        COL1_X = (-4 + -2.5) / 2
+        COL2_X = (-2.5 + -1) / 2
+        BOTTOM_Y = -3.25
+
+        opponent = TextMobject('Opposing\\\\Strategy')
+        opponent.scale(0.55).move_to(np.array([-5, 3, 0]))
+        blue2 = blue.copy().move_to(np.array([COL1_X, IMAGE_Y, 0]))
+        orange2 = orange.copy().move_to(np.array([COL2_X, IMAGE_Y, 0]))
+        score = TextMobject('\\textbf{Score}')
+        score.scale(0.6).move_to(np.array([-5, BOTTOM_Y, 0]))
+
+        blue3 = blue.copy().move_to(np.array([1.25, 0, 0])).scale(3)
+        better = TextMobject('is better than')
+        # better = TexMobject('>').move_to(np.array([3, 0, 0]))
+        orange3 = orange.copy().move_to(np.array([4.75, 0, 0])).scale(3)
+        VGroup(blue3, better, orange3).arrange(DOWN, buff=0.9).set_x(3.5)
+
+        # start of animations
+        self.play(
+            FadeIn(logo),
+            Write(how),
+        )
+        self.wait(1.8)
+        self.play(
+            Write(good_strategy),
+            FadeInFromDown(footnote),
+        )
+        self.wait(1)
+
+        # emphasize the word "how" again
+        end_height = how.get_height() * 1.2
+        end_y = how.get_y() + 0.2
+        how.set_color(YELLOW)
+        self.play(
+            # ApplyMethod(how.set_height, end_height),  # this isn't working
+            ApplyMethod(how.set_y, end_y),
+        )
+        self.play(
+            how.set_height, end_height,
+            rate_func=linear,
+            run_time=2,
+        )
+
+        # start showing the strategy
+        self.play(
+            ReplacementTransform(good_strategy, header),
+            FadeOutAndShiftDown(how),
+        )
+        self.play(ShowCreation(strategy_words))
+        self.play(
+            FadeInFrom(arrow_group, UP),
+            ReplacementTransform(strategy_words.copy(), strategy_code),
+            FadeOutAndShiftDown(footnote),
+            FadeInFromDown(disclaimer),
+        )
+        self.wait(1)
+        self.play(ReplacementTransform(strategy_code, strategy_code_general))
+        self.wait(1)
+        self.play(
+            LaggedStart(
+                ApplyMethod(strategy_code_general.move_to, strategy_code_general2.get_center()),
+                FadeInFromDown(where_n_is_large),
+            ),
+        )
+        self.play(
+            FadeIn(brace_group),
+        )
+        self.wait(1)
+        self.play(
+            Write(battle),
+            Write(comps),
+        )
+        self.wait(1)
+
+        # reveal the full screen and move the computers to the middle
+        self.remove(line)
+        self.play(
+            # line.move_to, np.array([-8, 0, 0]),
+            FadeOut(logo),
+            FadeOut(header),
+            FadeOut(strategy_words),
+            FadeOut(arrow_group),
+            # FadeOut(strategy_group),
+            FadeOut(strategy_code_general),
+            FadeOut(where_n_is_large),
+            FadeOut(brace_group),
+            FadeOutAndShiftDown(disclaimer),
+            Transform(comp_group, centred_comp_group),
+            run_time=1.5,
+        )
+
+        # centre the two strategies we are following
+        self.wait(0.5)
+
+        # move them in place for the table and write the table
+        self.play(
+            Transform(blue, blue2),
+            Transform(orange, orange2),
+            FadeOut(battle),
+            FadeOut(vs),
+            Write(table_lines[:3]),
+            Write(opponent),
+            run_time=1,
+        )
+        self.wait(0.2)
+
+        scores = [0, 0]
+        rates = [80, 60]
+        w = TextMobject('W').set_color(GREEN).scale(0.5)
+        l = TextMobject('L').set_color(RED).scale(0.5)
+
+        # opponent counter
+        self.x = Integer(group_with_commas=True).move_to(np.array([-5, 2.5, 0])).scale(0.5)
+
+        def play_games(start, end, wait_time):
+            for i in range(start, end + 1):
+                new_x = self.x.copy().set_value(i).next_to(self.x, DOWN, buff=0.09)
+                self.x = new_x
+                self.add(self.x)
+                for j in range(2):
+                    res = l
+                    if np.random.randint(0, 100) < rates[j]:
+                        scores[j] += 1
+                        res = w
+                    x_coord = (COL1_X if j == 0 else COL2_X)
+                    self.add(res.copy().move_to(np.array([x_coord, self.x.get_y(), 0])))
+                self.wait(wait_time)
+
+        vdots1 = TexMobject('\\vdots').move_to(np.array([COL1_X, -1.5, 0]))
+        vdots2 = TexMobject('\\vdots').move_to(np.array([COL2_X, -1.5, 0]))
+        vdots0 = TexMobject('\\vdots').move_to(np.array([self.x.get_x(), -1.5, 0]))
+
+        play_games(1, 4, 0.3)
+        play_games(5, 20, 0.1)
+        # play_games(5, 10, 0.1)
+        # self.play(
+        #     FadeIn(vdots0),
+        #     FadeIn(vdots1),
+        #     FadeIn(vdots2),
+        # )
+        # self.x.move_to(vdots0.get_bottom())
+        # play_games(9999, 10000, 0.7)
+
+        # compile scores
+        blue_score = Integer(scores[0], group_with_commas=True).move_to([COL1_X, BOTTOM_Y, 0]).scale(0.6)
+        orange_score = Integer(scores[1], group_with_commas=True).move_to([COL2_X, BOTTOM_Y, 0]).scale(0.6)
+
+        # show results
+        self.wait(0.5)
+        self.play(
+            Write(table_lines[3]),
+            Write(score),
+            FadeIn(blue_score),
+            FadeIn(orange_score),
+        )
+        self.play(
+            Transform(blue.copy(), blue3),
+            Transform(orange.copy(), orange3),
+            Write(better),
+        )
+        self.wait(1)
+
+
+class WhyComputersScene(Scene):
+    def construct(self):
+        # for debugging purposes; not in final video
+        SHOW_GRID = False
+        X_CUTOFF = -0.8
+
+        if SHOW_GRID:
+            grid = NumberPlane()
+            self.add(grid)
+
+        # title
+        # computer = ImageMobject('Computer.png')
+        computer = Laptop(width=2)
+        vs = TextMobject('{\\LARGE vs.}')
+        screen = ScreenRectangle(height=computer.get_height())
+        title_group = Group(computer, vs, screen)
+        title_group.arrange(RIGHT, buff=MED_LARGE_BUFF)
+
+        header = title_group.copy()
+        header.scale(0.4)
+        header.to_edge(UP)
+
+        # table stuff
+        table_lines = VGroup(
+            Line(np.array([-6, 0.5, 0]), np.array([6, 0.5, 0])),            # upper horizontal line
+            Line(np.array([-6, -1.5, 0]), np.array([6, -1.5, 0])),      # lower horizontal line
+            Line(np.array([-1.5, -3.5, 0]), np.array([-1.5, 3.5, 0])),  # left vertical line
+            Line(np.array([2.25, -3.5, 0]), np.array([2.25, 3.5, 0])),    # right vertical line
+        )
+
+        # constants
+        LABEL_X = -3.75
+        IMAGE_Y = 2
+        ROW1_Y = -0.5
+        ROW2_Y = -2.5
+        COL1_X = (-1.5 + 2.25) / 2
+        COL2_X = (2.25 + 6) / 2
+
+        # images
+        computer2 = computer.copy().move_to(np.array([COL1_X, IMAGE_Y, 0]))
+        screen2 = screen.copy().move_to(np.array([COL2_X, IMAGE_Y, 0]))
+
+        # row 1
+        capacity = TextMobject('Capacity').move_to(np.array([LABEL_X, ROW1_Y, 0]))
+        millions = TextMobject('millions of\\\\numbers').set_color(GREEN).move_to(np.array([COL1_X, ROW1_Y, 0])).scale(0.8)
+        two = TextMobject('two.').set_color(RED).move_to(np.array([COL2_X, ROW1_Y, 0])).scale(0.8)
+
+        # row 2
+        feasibility = TextMobject('Feasibility on\\\\a large scale').move_to(np.array([LABEL_X, ROW2_Y, 0]))
+        doable = TextMobject('doable').set_color(GREEN).move_to(np.array([COL1_X, ROW2_Y, 0])).scale(0.8)
+        no_way = TextMobject('no way').set_color(RED).move_to(np.array([COL2_X, ROW2_Y, 0])).scale(0.8)
+
+        # self.add(
+        #     capacity,
+        #     millions,
+        #     two,
+        #     feasibility,
+        #     doable,
+        #     no_way,
+        # )
+
+        # animations start
+        self.add(title_group)
+        self.wait(1)
+        self.play(
+            ReplacementTransform(computer, computer2),
+            ReplacementTransform(screen, screen2),
+            FadeOut(vs),
+            FadeIn(table_lines),
+        )
+        self.wait(1)
+        self.play(Write(capacity))
+        self.wait(1)
+        self.play(FadeInFromLarge(millions))
+        self.wait(1)
+        self.play(FadeIn(two))
+        self.wait(2)
+        self.play(Write(feasibility))
+        self.wait(1)
+        self.play(FadeIn(no_way))
+        self.wait(1)
+        self.play(FadeInFromLarge(doable))
+        self.wait(2)
