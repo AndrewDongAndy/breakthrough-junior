@@ -356,6 +356,7 @@ class MovingPointScene(Scene):
             self.move_stop_point(p, rate_func=wiggle, run_time=0.8)
 
 
+# this one is not being used
 class MovingPointScene1(MovingPointScene):
     CONFIG = {
         'passenger_locations': [
@@ -423,6 +424,7 @@ def tangent_plane_value(x0, y0, u, v):
     return z0 + partial_x * (u - x0) + partial_y * (v - y0)
 
 
+# this one is not being used
 class MovingPointSceneWithCluster(MovingPointScene):
     CONFIG = {
         'passenger_locations': passenger_locations,
@@ -504,15 +506,15 @@ class GradientScene(Scene):
 
         # Calculus stuff
         calculus = TextMobject('\\underline{Calculus}').scale(0.7)
-        derivative = TexMobject('\\dfrac{d}{dx} f(x)').scale(0.6)
-        integral = TexMobject('\\int f(x) \, dx').scale(0.6)
+        derivative = TexMobject('\\dfrac{d}{dx} f(x)').scale(0.55)
+        integral = TexMobject('\\int f(x) \, dx').scale(0.55)
 
         derivative.next_to(calculus, direction=DOWN, buff=0.4, aligned_edge=LEFT)
-        integral.next_to(derivative, direction=RIGHT, buff=0.2)
+        integral.next_to(derivative, direction=RIGHT, buff=0.4)
 
         calculus_group = VGroup(calculus, derivative, integral)
         calculus_group.to_edge(LEFT)
-        calculus_group.move_to(calculus_group.get_center() + np.array([0, -1, 0]))
+        calculus_group.move_to(calculus_group.get_center() + np.array([0, -0.9, 0]))
 
         # divider
         divider = Line(np.array([-3.94, -0.5, 0]), np.array([-3.94, -2.7, 0]))
@@ -520,12 +522,16 @@ class GradientScene(Scene):
 
         # Linear Algebra stuff
         linear_algebra = TextMobject('\\underline{Linear Algebra}').scale(0.7)
-        vector = TexMobject('\\vec{u} = \\begin{bmatrix}1 \\\\ 2\\end{bmatrix}').scale(0.6)
-        matrix = TexMobject('\\begin{bmatrix}3 & 1 & 4 \\\\ 1 & 5 & 9 \\\\ 2 & 6 & 5\\end{bmatrix}').scale(0.6)
+        vector = TexMobject('\\begin{bmatrix}1 \\\\ 2 \\\\ 3 \\end{bmatrix}').scale(0.6)
+        matrix = TexMobject('\\begin{bmatrix}3 & 1 & 4 \\\\ 1 & 5 & 9 \\\\ 2 & 6 & 5 \\end{bmatrix}^T').scale(0.6   )
+        # matrix = TexMobject('\\begin{bmatrix}3 & 1 & 4 \\\\ 1 & 5 & 9 \\\\ 2 & 6 & 5\\end{bmatrix}').scale(0.6)
 
         linear_algebra.next_to(calculus, buff=1.6)
-        vector.next_to(linear_algebra, direction=DOWN, buff=0.3, aligned_edge=LEFT)
-        matrix.next_to(vector, direction=RIGHT, buff=0.2)
+        matrix.next_to(linear_algebra, direction=DOWN, buff=0.3, aligned_edge=LEFT)
+        matrix.set_x(matrix.get_x() + 0.05)
+        vector.next_to(matrix, direction=RIGHT, buff=0.4)
+        # vector.next_to(linear_algebra, direction=DOWN, buff=0.3, aligned_edge=LEFT)
+        # matrix.next_to(vector, direction=RIGHT, buff=0.2)
 
         linalg_group = VGroup(linear_algebra, vector, matrix)
         # linalg_group.next_to(calculus_group, RIGHT, buff=2)
@@ -580,7 +586,7 @@ class GradientScene(Scene):
         self.play(Write(definition))
         self.wait(1.4)
         self.play(FadeInFromLarge(title))
-        self.wait(1)
+        self.wait(1.4)
 
         EM_SCALE = 1.1  # scale factor used to emphasize a word
         EM_SHIFT = 0.1  # shift to emphasize
@@ -601,7 +607,7 @@ class GradientScene(Scene):
                 lag_ratio=0.3,
             ),
         )
-        self.wait(3)
+        self.wait(3.1)
 
         # animate in the arguments of the function
         self.play(
@@ -633,13 +639,13 @@ class GradientScene(Scene):
         self.wait(1.5)
 
         # unemphasize the word "descent"
-        self.play(
-            # ApplyMethod(descent.scale, 1 / EM_SCALE),
-            ApplyMethod(descent.set_y, descent.get_y() - EM_SHIFT),
-            # ApplyMethod(gradient.set_color, WHITE),
-        )
-        descent.set_color(WHITE)
-        self.wait(1)
+        # self.play(
+        #     # ApplyMethod(descent.scale, 1 / EM_SCALE),
+        #     ApplyMethod(descent.set_y, descent.get_y() - EM_SHIFT),
+        #     # ApplyMethod(gradient.set_color, WHITE),
+        # )
+        # descent.set_color(WHITE)
+        # self.wait(1)
 
 
 class AlphaGoScene(Scene):
@@ -682,8 +688,8 @@ class AlphaGoScene(Scene):
         # "reinforcement learning"
         disclaimer = TextMobject(
             'Of course, this is not the exact way AlphaGo learns; the state-of-the-art algorithms used by '
-            'AlphaGo are much more intricate. Nonetheless, some degree of quantifiability is '
-            'certainly required. AlphaGo uses a technique known as \\textit{reinforcement learning}.'
+            'AlphaGo are much more intricate. AlphaGo uses \\textit{reinforcement learning} combined with '
+            '\\textit{Monte Carlo tree search}. Nonetheless, the ability to quantify is certainly required.'
         )
         disclaimer.scale(FOOTNOTE_SCALE)
         disclaimer.to_edge(DOWN, buff=0.2)
@@ -729,6 +735,16 @@ class AlphaGoScene(Scene):
         strat.next_to(dim_text, DOWN, buff=SMALL_BUFF)
         brace_group = VGroup(arg_brace, dim_text, strat)
 
+        # AlphaGo information
+        info = TextMobject(
+            'Go is widely known as the hardest board game to master in the world. The victory of AlphaGo over '
+            'Lee Sedol, one of the best Go players ever, was a major milestone in artificial intelligence.'
+        )
+        info.scale(FOOTNOTE_SCALE)
+        info.to_edge(DOWN, buff=0.2)
+        info.set_x(X_CENTRE)
+
+        # terminology of "strategy"
         footnote = TextMobject(
             "Here, ``strategy'' refers to the procedure, the set of instructions, that is followed to "
             "determine how a task is gone about being achieved."
@@ -778,17 +794,17 @@ class AlphaGoScene(Scene):
         better = TextMobject('is better than')
         # better = TexMobject('>').move_to(np.array([3, 0, 0]))
         orange3 = orange.copy().move_to(np.array([4.75, 0, 0])).scale(3)
-        VGroup(blue3, better, orange3).arrange(DOWN, buff=0.9).set_x(3.5)
+        VGroup(blue3, better, orange3).arrange(DOWN, buff=0.9).set_x(3)
 
         # start of animations
         self.play(
             FadeIn(logo),
             Write(how),
+            FadeInFromDown(info),
         )
         self.wait(1.8)
         self.play(
             Write(good_strategy),
-            FadeInFromDown(footnote),
         )
         self.wait(1)
 
@@ -799,6 +815,8 @@ class AlphaGoScene(Scene):
         self.play(
             # ApplyMethod(how.set_height, end_height),  # this isn't working
             ApplyMethod(how.set_y, end_y),
+            FadeOutAndShiftDown(info),
+            FadeInFromDown(footnote),
         )
         self.play(
             how.set_height, end_height,
@@ -820,7 +838,7 @@ class AlphaGoScene(Scene):
         )
         self.wait(1)
         self.play(ReplacementTransform(strategy_code, strategy_code_general))
-        self.wait(1)
+        self.wait(1.5)
         self.play(
             LaggedStart(
                 ApplyMethod(strategy_code_general.move_to, strategy_code_general2.get_center()),
@@ -940,8 +958,10 @@ class WhyComputersScene(Scene):
         # computer = ImageMobject('Computer.png')
         computer = Laptop(width=2)
         vs = TextMobject('{\\LARGE vs.}')
-        screen = ScreenRectangle(height=computer.get_height())
-        title_group = Group(computer, vs, screen)
+        screen = SVGMobject('Math.svg').set_color(BLUE)
+        # screen = TextMobject('{\\LARGE math}')
+        # screen = ScreenRectangle(height=computer.get_height())
+        title_group = VGroup(computer, vs, screen)
         title_group.arrange(RIGHT, buff=MED_LARGE_BUFF)
 
         header = title_group.copy()
@@ -950,10 +970,10 @@ class WhyComputersScene(Scene):
 
         # table stuff
         table_lines = VGroup(
-            Line(np.array([-6, 0.5, 0]), np.array([6, 0.5, 0])),            # upper horizontal line
+            Line(np.array([-6, 0.5, 0]), np.array([6, 0.5, 0])),        # upper horizontal line
             Line(np.array([-6, -1.5, 0]), np.array([6, -1.5, 0])),      # lower horizontal line
             Line(np.array([-1.5, -3.5, 0]), np.array([-1.5, 3.5, 0])),  # left vertical line
-            Line(np.array([2.25, -3.5, 0]), np.array([2.25, 3.5, 0])),    # right vertical line
+            Line(np.array([2.25, -3.5, 0]), np.array([2.25, 3.5, 0])),  # right vertical line
         )
 
         # constants
@@ -965,18 +985,18 @@ class WhyComputersScene(Scene):
         COL2_X = (2.25 + 6) / 2
 
         # images
-        computer2 = computer.copy().move_to(np.array([COL1_X, IMAGE_Y, 0]))
+        computer2 = computer.copy().move_to(np.array([COL1_X, IMAGE_Y, 0])).scale(0.8)
         screen2 = screen.copy().move_to(np.array([COL2_X, IMAGE_Y, 0]))
 
         # row 1
-        capacity = TextMobject('Capacity').move_to(np.array([LABEL_X, ROW1_Y, 0]))
-        millions = TextMobject('millions of\\\\numbers').set_color(GREEN).move_to(np.array([COL1_X, ROW1_Y, 0])).scale(0.8)
-        two = TextMobject('two.').set_color(RED).move_to(np.array([COL2_X, ROW1_Y, 0])).scale(0.8)
+        capacity = TextMobject('Capacity').move_to(np.array([LABEL_X, ROW1_Y, 0])).scale(1.25)
+        millions = TextMobject('millions of\\\\numbers').set_color(GREEN).move_to(np.array([COL1_X, ROW1_Y, 0])).scale(1.1)
+        two = TextMobject('like, two.').set_color(RED).move_to(np.array([COL2_X, ROW1_Y, 0])).scale(1.1)
 
         # row 2
-        feasibility = TextMobject('Feasibility on\\\\a large scale').move_to(np.array([LABEL_X, ROW2_Y, 0]))
-        doable = TextMobject('doable').set_color(GREEN).move_to(np.array([COL1_X, ROW2_Y, 0])).scale(0.8)
-        no_way = TextMobject('no way').set_color(RED).move_to(np.array([COL2_X, ROW2_Y, 0])).scale(0.8)
+        feasibility = TextMobject('Feasibility on\\\\a large scale').move_to(np.array([LABEL_X, ROW2_Y, 0])).scale(1.25)
+        doable = TextMobject('doable').set_color(GREEN).move_to(np.array([COL1_X, ROW2_Y, 0])).scale(1.1)
+        no_way = TextMobject('no way').set_color(RED).move_to(np.array([COL2_X, ROW2_Y - 0.07, 0])).scale(1.1)
 
         # self.add(
         #     capacity,
@@ -998,14 +1018,31 @@ class WhyComputersScene(Scene):
         )
         self.wait(1)
         self.play(Write(capacity))
-        self.wait(1)
+        self.wait(0.5)
         self.play(FadeInFromLarge(millions))
-        self.wait(1)
+        self.wait(0.5)
         self.play(FadeIn(two))
-        self.wait(2)
+        self.wait(1)
         self.play(Write(feasibility))
-        self.wait(1)
+        self.wait(0.5)
         self.play(FadeIn(no_way))
-        self.wait(1)
+        self.wait(0.5)
         self.play(FadeInFromLarge(doable))
-        self.wait(2)
+        self.wait(1)
+
+
+class CreditsScene(Scene):
+    def construct(self):
+        my_roles = TextMobject('\\underline{Producer, Writer, and Editor}').scale(0.8)
+        andrew = TextMobject('Andrew Dong').scale(1)
+        date = TextMobject('June 25, 2020').scale(0.8)
+        wallace = TextMobject('Special thanks to Adam Wallace').scale(1)
+        my_stuff = VGroup(my_roles, andrew, date).arrange(DOWN, buff=0.3)
+        group = VGroup(my_stuff, wallace)
+        group.arrange(DOWN, buff=LARGE_BUFF)
+        group.move_to(ORIGIN)
+
+        # frame construction start
+        self.add(group, date)
+        self.wait(1)
+        # self.show_frame()
